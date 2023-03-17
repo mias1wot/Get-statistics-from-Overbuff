@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# <h1>Overwatch data collection</h1><br>
+# <h1>Overwatch data collection<br>
+#     <small>version 2</small>
+# </h1><br>
+# 
 # The code is originally written via Jupyter Notebook.<br>
 # 
 # The data collection is done in 3 stages, described below.<br>
 # To execute the program, you need to compile all methods and run main() method located in <b>Stage 0: Program setup</b>.<br>
-# Also you can fine-tune the program execution with global variables contained in <b>Stage 0: Program setup</b>. When you change a cell with global variables, you need to <b>run</b> that cell ('Control' + 'Enter').<br>
+# Also you can fine-tune the program execution with global variables contained in <b>Stage 0: Program setup</b>. When you change a cell with global variables, you need to <b>run</b> that cell ('Control' + 'Enter'). For instance, here you can set a competative season for which you want to get information (or set quick play).<br>
 # 
 # For this file compilation, I suggest you <b>comment out main()</b> method and run all cells ('Cell' -> 'Run All'). After that delete comment from main() method and execute it (click on cell with main(); 'Cell' -> 'Run Cells' or  simply hit a key combination: 'Control' + 'Enter'). The program will be writing its current state of execution.
 # <hr>
@@ -67,51 +70,69 @@
 
 # <h4>Data setup</h4>
 
-# In[711]:
+# In[32]:
 
 
-#These are the names for columns:
+# These are the names for columns:
 HERO_STATS_NAME = 'Hero'
 HERO_ROLE_NAME = 'Role'
 SKILL_TIER_STATS_NAME = 'Skill Tier'
 
-#This determs the 'Role' stats position. Information for these values is above.
+# For which season to retrieve data?
+# Ignored if GET_QUICK_DATA = True.
+OW2_SEASON = 3
+
+# Current overwatch season (this is needed to determine the name of file containing the stats data)
+# Ignored if GET_QUICK_DATA = True.
+OW2_CURRENT_SEASON = 3
+
+# If True, get only data about quick play. Otherwise retrieve competitive data for the specified season.
+GET_QUICK_DATA = False
+
+# This determs the 'Role' stats position. Information for these values is above.
 SPECIFIC_HERO_ROLE_POSITION = 'Last'
 
 
 # <h4>Browser setup</h4>
 
-# In[5]:
+# In[31]:
 
 
-#[Unnecessary] The path to firefox.exe file. Ignored if FIREFOX_PATH = None.
+# [Unnecessary] The path to firefox.exe file. Ignored if FIREFOX_PATH = None.
 FIREFOX_PATH = None
-#[Unnecessary] The path to firefox profile folder. Ignored if PROFILE_PATH = None.
+
+# [Unnecessary] The path to firefox profile folder. Ignored if PROFILE_PATH = None.
 PROFILE_PATH = None
 
-#[Unnecessary] if EXTENSION_PATH != None, the extension will be added (extension is a file ending with .xpi). It may contain path to adblock, for example.
+# [Unnecessary] if EXTENSION_PATH != None, the extension will be added (extension is a file ending with .xpi). It may contain path to adblock, for example.
 EXTENSION_PATH = None
 
 
 # <h4>Debug setup</h4>
 
-# In[4]:
+# In[33]:
 
 
-#If you want to fetch ALL data, set DEBUG to False. If you want to see how the program operate or if you changed the program and want to test it, set DEBUG to True.
+# If you want to fetch ALL data, set DEBUG to False. If you want to see how the program operate or if you changed the program and want to test it, set DEBUG to True.
 DEBUG = True
 
-#Works only if DEBUG is True! Otherwise ignored:
+# Works only if DEBUG is True! Otherwise ignored:
 
-#How many heroes do you need to fetch information about from the site
+# How many heroes do you need to fetch information about from the site.
+# 0 - iterate all heroes.
 DEBUG__ITERATE_HEROES_COUNT = 1
-#How many skill_tiers do you need to fetch information about from the site
+
+# How many skill_tiers do you need to fetch information about from the site.
+# 0 - iterate all skill_tiers.
 DEBUG__ITERATE_SKILL_TIERS_COUNT = 2
-#Do you want to see browser during scraping? If so, make it True. Invisibility benefits performance and the browser doesn't blink if front of you.
+
+# Do you want to see browser during scraping? If so, make it True. Invisibility benefits performance and the browser doesn't blink if front of you.
 IS_BROWSER_VISIBLE = True
-#This property disables many browser features to operate faster. If you want to explore how the program works, set False for better pictures.
+
+# This property disables many browser features to operate faster. If you want to explore how the program works, set False for better pictures.
 BROWSER_OPTIMIZATION_ENABLED = False
-#Indicates whether you want all found stats to be output to console.
+
+# Indicates whether you want all found stats to be output to console.
 OUTPUT_UNIQUE_STATS_TO_CONSOLE = False
 
 
@@ -132,7 +153,7 @@ main()
 # </pre>
 # 
 
-# In[715]:
+# In[6]:
 
 
 #pip install selenium
@@ -153,7 +174,7 @@ import numpy as np
 from collections import OrderedDict
 
 
-# In[716]:
+# In[30]:
 
 
 #heroStats = [['Stats Name', 'Stats Value'], ...]
@@ -163,10 +184,10 @@ def main():
     print()
     cleanseData(heroStats)
     print()
-    translateDataToTableAndSaveTable(heroStats)
+    fileName = translateDataToTableAndSaveTable(heroStats)
     print()
     
-    print(f"\nProgram has finished successfully.\nYour data is in {'ow_heroes_data_season3_{YYYY-mm-dd}.csv'} file")
+    print(f"\nProgram has finished successfully.\nYour data is in '{fileName}' file.")
 
 
 # <pre>
@@ -181,7 +202,7 @@ def main():
 # </pre>
 # 
 
-# In[717]:
+# In[8]:
 
 
 def collectData():
@@ -202,7 +223,7 @@ def collectData():
     return heroStats
 
 
-# In[718]:
+# In[9]:
 
 
 #Launch browser
@@ -278,7 +299,7 @@ def launchBrowser():
     return browser
 
 
-# In[719]:
+# In[10]:
 
 
 #Get all heroes
@@ -297,7 +318,7 @@ def getAllHeroes(browser):
     return heroes
 
 
-# In[720]:
+# In[11]:
 
 
 def tweakHeroNameForSpecialCases(hero):
@@ -312,7 +333,7 @@ def tweakHeroNameForSpecialCases(hero):
     return hero
 
 
-# In[721]:
+# In[12]:
 
 
 #Overbuff represents differently some special symbols in URL (e.g. ':' as '-')
@@ -330,61 +351,81 @@ def heroToOverbuffUrl(hero):
     return hero.lower()
 
 
-# In[722]:
+# In[13]:
 
 
-#'heroStats' will get appended
-def getDiscreteStatsFromStatsDiv(hero, curSkillTier, discreteStatsDiv, heroStats):
-    statsValue = discreteStatsDiv.find_element("xpath", "div/div/span/span").get_attribute('innerHTML')
-    statsName = discreteStatsDiv.find_element("xpath", "div/div[2]").get_attribute('innerHTML')
-    
-    #if stats is in percent
-    if '%' in statsValue:
-        statsValue = re.search('[0-9\.,]+', statsValue).group()
-        statsName += ', %'
+#Overbuff represents seasons as two numbers. If the season has only 1 number, '0' is added in front (e.g. season 2 => '02')
+def seasonToOverbuffUrl(season):
+    seasonUrl = str(season)
+    if season < 10:
+        seasonUrl = '0' + seasonUrl
         
-    #if this is stats per N minutes (for example: /10min)
-    try:
-        if (statsPerN := discreteStatsDiv.find_element("xpath", "div/div/span[2]")) is not None:
-            statsName += f" {statsPerN.get_attribute('innerHTML')}"
-    except NoSuchElementException:
-        pass
+    return seasonUrl
+
+
+# In[14]:
+
+
+#This is the main method where stats are collected
+#heroStats = [['Stats Name', 'Stats Value'], ...]
+def collectStatsFromAllHeroes(heroes, browser):
+    debug_iterateHeroesCount = DEBUG__ITERATE_HEROES_COUNT
     
-    heroStats.append([statsName, statsValue])
+    fetchingInfo = 'quickplay' if GET_QUICK_DATA else f'competitive, season {OW2_SEASON}'
+    print(f"\nFetching heroes stats ({fetchingInfo}):")
+    
+    heroesCount = len(heroes)
+    heroStats = []
+    for i in range(heroesCount):
+        hero = heroes[i]
+        getHeroInfo(heroes[i], browser, heroStats)
+        print(f"{i+1} of {heroesCount} heroes finished.")
+        
+        if DEBUG == True:
+            debug_iterateHeroesCount -= 1
+            if debug_iterateHeroesCount == 0:
+                break
+                
+    print()
+    
+    return heroStats
 
 
-# In[723]:
+# In[15]:
 
 
 #'heroStats' will get appended
-def iterateAllDiscreteStatsInDiv(hero, curSkillTier, divWithDiscreteStats, heroStats):
-    discreteStatsCount = int(divWithDiscreteStats.get_attribute("childElementCount"))
-    for i in range(discreteStatsCount):
-        getDiscreteStatsFromStatsDiv(hero, curSkillTier, divWithDiscreteStats.find_element("xpath", f"div[{i+1}]"), heroStats)
-
-
-# In[724]:
-
-
-#'heroStats' will get appended
+#If a hero didn't exist in that season, they're skipped
 def getHeroInfo(hero, browser, heroStats):
     skillTiers = ["All", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster"]
+    heroUrl = heroToOverbuffUrl(hero)
+    ow2SeasonUrl = seasonToOverbuffUrl(OW2_SEASON)
 
     #Only in debug mode: How many skill tiers to iterate before break
     debug_iterateSkillTiersCount = DEBUG__ITERATE_SKILL_TIERS_COUNT
     
-    heroUrl = heroToOverbuffUrl(hero)
+    #If hero didn't exist in this season
+    browser.get(f"https://www.overbuff.com/heroes/{heroUrl}?platform=pc&gameMode=competitive&hero={heroUrl}&skillTier={skillTiers[0].lower()}&season=ow2s{ow2SeasonUrl}")
+    nodeWithStatsTable = browser.find_element("xpath", "/html/body/div/div/main/div[2]/div[2]/div[3]/div/div[2]")
+    if nodeWithStatsTable.get_attribute('innerHTML') == '':
+        print(f"{hero} didn't exist in that season.")
+        return
+    
     
     #Add 'Hero' stats
     heroStats.append([HERO_STATS_NAME, hero])
     
     #Add hero role (support, dmg, tank)
-    browser.get(f"https://www.overbuff.com/heroes/{heroUrl}")
+    #We've come to that page when we were checking if the hero existed in current season
+    #browser.get(f"https://www.overbuff.com/heroes/{heroUrl}")
     heroRole = browser.find_element("xpath", "/html/body/div/div/main/div[2]/div[2]/div/div[2]/div/div[3]/div/a/div").get_attribute('innerHTML')
     heroStats.append([HERO_ROLE_NAME, heroRole])
     
     for curSkillTier in skillTiers:
-        browser.get(f"https://www.overbuff.com/heroes/{heroUrl}?platform=pc&gameMode=competitive&hero={heroUrl}&skillTier={curSkillTier.lower()}&season=ow2s03")
+        if GET_QUICK_DATA == True:
+            browser.get(f"https://www.overbuff.com/heroes/{heroUrl}?platform=pc&gameMode=quickplay&hero={heroUrl}&skillTier={curSkillTier.lower()}")
+        else:
+            browser.get(f"https://www.overbuff.com/heroes/{heroUrl}?platform=pc&gameMode=competitive&hero={heroUrl}&skillTier={curSkillTier.lower()}&season=ow2s{ow2SeasonUrl}")
         statsTable = browser.find_element("xpath", "/html/body/div/div/main/div[2]/div[2]/div[3]/div/div[2]/div")
         
         #Add 'Skill Tier' stats
@@ -411,31 +452,37 @@ def getHeroInfo(hero, browser, heroStats):
                 break
 
 
-# In[725]:
+# In[16]:
 
 
-#This is the main method where stats are collected
-#heroStats = [['Stats Name', 'Stats Value'], ...]
-def collectStatsFromAllHeroes(heroes, browser):
-    debug_iterateHeroesCount = DEBUG__ITERATE_HEROES_COUNT
+#'heroStats' will get appended
+def iterateAllDiscreteStatsInDiv(hero, curSkillTier, divWithDiscreteStats, heroStats):
+    discreteStatsCount = int(divWithDiscreteStats.get_attribute("childElementCount"))
+    for i in range(discreteStatsCount):
+        getDiscreteStatsFromStatsDiv(hero, curSkillTier, divWithDiscreteStats.find_element("xpath", f"div[{i+1}]"), heroStats)
+
+
+# In[17]:
+
+
+#'heroStats' will get appended
+def getDiscreteStatsFromStatsDiv(hero, curSkillTier, discreteStatsDiv, heroStats):
+    statsValue = discreteStatsDiv.find_element("xpath", "div/div/span/span").get_attribute('innerHTML')
+    statsName = discreteStatsDiv.find_element("xpath", "div/div[2]").get_attribute('innerHTML')
     
-    print(f"\nFetching heroes stats:")
-    
-    heroesCount = len(heroes)
-    heroStats = []
-    for i in range(heroesCount):
-        hero = heroes[i]
-        getHeroInfo(heroes[i], browser, heroStats)
-        print(f"{i+1} of {heroesCount} heroes finished.")
+    #if stats is in percent
+    if '%' in statsValue:
+        statsValue = re.search('[0-9\.,]+', statsValue).group()
+        statsName += ', %'
         
-        if DEBUG == True:
-            debug_iterateHeroesCount -= 1
-            if debug_iterateHeroesCount == 0:
-                break
-                
-    print()
+    #if this is stats per N minutes (for example: /10min)
+    try:
+        if (statsPerN := discreteStatsDiv.find_element("xpath", "div/div/span[2]")) is not None:
+            statsName += f" {statsPerN.get_attribute('innerHTML')}"
+    except NoSuchElementException:
+        pass
     
-    return heroStats
+    heroStats.append([statsName, statsValue])
 
 
 # <strong>Tests:</strong>
@@ -452,7 +499,7 @@ def collectStatsFromAllHeroes(heroes, browser):
 # </pre>
 # 
 
-# In[726]:
+# In[18]:
 
 
 #Be careful when 'Stats Name'='Hero' as hero name may contain symbols which are cleared from cleansing methods.
@@ -466,7 +513,7 @@ def cleanseData(heroStats):
     print(f"Data cleansing (stage 2) finished.")
 
 
-# In[727]:
+# In[19]:
 
 
 #Data cleansing: delete comma separator on thousands (e.g. 1,009 => 1009)
@@ -477,7 +524,7 @@ def cleansing_deleteThousandsComma(heroStats):
             heroStatsRecord[1] = heroStatsRecord[1].replace(',','')
 
 
-# In[728]:
+# In[20]:
 
 
 #Data cleansing: translate time representation (e.g. '01:23') to seconds (1*60 + 23 => 83)
@@ -501,24 +548,27 @@ def cleansing_translateTimeWithColonToSeconds(heroStats):
 # </pre>
 # 
 
-# In[737]:
+# In[21]:
 
 
+#Returns a name of file with data
 def translateDataToTableAndSaveTable(heroStats):
     print("Data translation to table and saving have begun.")
     uniqueStats = retrieveUniqueStatsFromData(heroStats)
     heroStatsTable = createTableFromData(heroStats, uniqueStats)
     print("Data translation to table finished.")
-    saveTable(heroStatsTable, uniqueStats)
+    fileName = saveTable(heroStatsTable, uniqueStats)
     print("Data saving finished.")
     
     print(f"Data translation to table and saving (stage 3) finished.")
     
     if DEBUG == True and OUTPUT_UNIQUE_STATS_TO_CONSOLE == True:
         print(f"\nUnique stats:\n{uniqueStats}\n")
+        
+    return fileName
 
 
-# In[730]:
+# In[22]:
 
 
 #Find all unique stats names
@@ -534,7 +584,7 @@ def retrieveUniqueStatsFromData(heroStats):
     return uniqueStats
 
 
-# In[731]:
+# In[23]:
 
 
 #position 'Role' to the last element
@@ -543,7 +593,7 @@ def setHeroRoleToLastPosition(uniqueStats):
     uniqueStats.append(HERO_ROLE_NAME)
 
 
-# In[732]:
+# In[24]:
 
 
 #Create tabular form of results
@@ -589,25 +639,48 @@ def createTableFromData(heroStats, uniqueStats):
     return heroStatsTable
 
 
-# In[733]:
+# In[25]:
 
 
+#Returns a name of file with data
 def saveTable(heroStatsTable, uniqueStats):
-    with open(f'ow_heroes_data_season3_{datetime.today().strftime("%Y-%m-%d")}.csv', 'w', encoding='UTF8', newline='') as f:
+    curDate = datetime.today().strftime("%Y-%m-%d")
+    
+    if GET_QUICK_DATA == True:
+        fileName = f'ow2_quickplay_heroes_stats__{curDate}.csv'
+    else:
+        fileName = f'ow2_season_{seasonToFileName(OW2_SEASON)}_{"FINAL" if OW2_SEASON < OW2_CURRENT_SEASON else "INTERMEDIATE"}_heroes_stats__{curDate}.csv'
+    
+    
+    with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
 
-        # write the header
+        # write the header (heroes stats names)
         writer.writerow(uniqueStats)
 
-        # write multiple rows
+        # write heroes stats values
         writer.writerows(heroStatsTable)
+        
+        return fileName
+
+
+# In[26]:
+
+
+# Seasons is represented  as two numbers. If the season has only 1 number, '0' is added in front (e.g. season 2 => '02')
+def seasonToFileName(season):
+    seasonFileName = str(season)
+    if season < 10:
+        seasonFileName = '0' + seasonFileName
+        
+    return seasonFileName
 
 
 # <pre>
 # 
 # 
 # </pre>
-# <h2>Test area (you can use it to test changes)</h2>
+# <h2>Test area</h2>
 # <pre>
 # 
 # 
@@ -622,7 +695,7 @@ browser = launchBrowser()browser.quit()heroStats = []DEBUG = True
 hero = "Soldier: 76"
 
 #browser = launchBrowser()
-getHeroInfo(hero, browser, heroStats)cleanseData(heroStats)translateDataToTableAndSaveTable(heroStats)heroStats
+getHeroInfo(hero, browser, heroStats)cleanseData(heroStats)translateDataToTableAndSaveTable(heroStats)
 # <pre>
 # 
 # 
@@ -634,7 +707,7 @@ getHeroInfo(hero, browser, heroStats)cleanseData(heroStats)translateDataToTableA
 # 
 # </pre>
 
-# In[734]:
+# In[27]:
 
 
 def isBrowserAlive(browser):
@@ -647,7 +720,7 @@ def isBrowserAlive(browser):
 #isBrowserAlive(browser)
 
 
-# In[735]:
+# In[28]:
 
 
 import timeit
