@@ -2,13 +2,14 @@ This project contains python selenium code for scraping Overwatch 2 data from [O
 
 The code was originally created in Jupyter. Because of this, "*.py* file isn't formatted well - it had no additional processing after downloading it from Jupyter.
 
-## Current version 2 capabilities:
+## Current version 3 capabilities:
 - Get data for any competitive season as well as for quick play for each hero and ranks along with the standard statistics (common to each hero as well as information belonging to a specific hero).
 - Check if hero informaion exists before retrieving it (as new heroes don't have info for previous seasons).
 - Data cleansing:
     * Deleted comma separator on thousands (e.g. 1,009 => 1009).
     * Translated time representation (e.g. '01:23') to seconds (1*60 + 23 => 83).
     * Lúcio has become Lucio, Torbjörn - Torbjorn.
+- Data validation and fixing for columns with numeric data.
 - Format for a name of the output file with the table:
     * curDate = datetime.today().strftime("%Y-%m-%d")
     * For quick play:
@@ -17,9 +18,18 @@ The code was originally created in Jupyter. Because of this, "*.py* file isn't f
         * f'ow2\_season\_{OW2\_SEASON with 2 digits}\_FINAL\_heroes\_stats\_\_{curDate}.csv'
     * For continuing competitive season:
         * f'ow2\_season\_{OW2\_SEASON with 2 digits}\_INTERMEDIATE\_heroes\_stats\_\_{curDate}.csv'
+- Validation and fixing of previously fetched data (which is already in a file) via the second program that reuses the code of the main program.
 
 
 ## Previous versions
+
+
+#### Version 3 new capabilities:
+- Added data validation and fixing for columns with numeric data.
+- Created a new program for validation and fixing of previously fetched data (for data which is already in a file) which reuses the code of the main program.
+- Added the program execution start and finish time.
+
+<hr>
 
 
 #### Version 2 new capabilities:
